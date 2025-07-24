@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Raft3D Dashboard</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      padding: 20px;
+      background-color: #f0f0f0;
+    }
+    h1 {
+      color: #333;
+    }
+    #status {
+      margin-bottom: 20px;
+      padding: 10px;
+      background: #dcdcdc;
+      display: inline-block;
+    }
+    input, button {
+      padding: 10px;
+      margin-right: 10px;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 10px;
+    }
+    th, td {
+      border: 1px solid #bbb;
+      padding: 8px;
+      text-align: left;
+    }
+    th {
+      background-color: #ddd;
+    }
+    #job-list {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #fff;
+      border: 1px solid #ccc;
+      padding: 10px;
+      width: 60%;
+    }
+  </style>
+</head>
+<body>
+  <h1>Raft3D Job Dashboard</h1>
+  <div id="status">Status: Loading...</div>
+  <form id="jobForm">
+    <input type="text" id="jobInput" placeholder="Enter job..." required>
+    <button type="submit">Submit Job</button>
+  </form>
+
+  <h3>Submitted Jobs:</h3>
+  <div id="job-list">
+    <table id="jobsTable">
+      <thead>
+        <tr><th>Job</th><th>Count</th></tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <script>
+    const apiBase = "http://localhost:8080"; // Point to your Leader Node
+  
+    function updateStatus() {
+      fetch(apiBase + "/status")
+        .then(res => res.text())
+        .then(text => {
+          document.getElementById("status").innerText = text;
+        });
+    }
+  
+    function loadJobs() {
+      fetch(apiBase + "/api/v1/print_jobs")
+        .then(res => res.json())
+        .then(jobs => {
+          const tableBody = document.querySelector("#jobsTable tbody");
+          tableBody.innerHTML = "";
+          const jobArray = Object.values(jobs);
+          if (jobArray.length === 0) {
+            tableBody.innerHTML = "<tr><td colspan='2'>No jobs submitted yet.</td></tr>";
+          } else {
+            jobArray.forEach(job => {
+              const row = `<tr><td>${job.id}</td><td>${job.status}</td></tr>`;
+              tableBody.innerHTML += row;
+            });
+          }
+        });
+    }
+  
+    document.getElementById("jobForm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      const jobID = document.getElementById("jobInput").value;
+  
+      // You’ll need a real payload here
+      const payload = {
+        id: jobID,
+        printer_id: "p1", // You can dynamically select later
+        filament_id: "f1",
+        filepath: "prints/sample.gcode",
+        print_weight_in_grams: 150
+      };
+  
+      fetch(apiBase + "/api/v1/print_jobs", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      }).then(() => {
+        document.getElementById("jobInput").value = "";
+        loadJobs();
+      });
+    });
+  
+    updateStatus();
+    loadJobs();
+    setInterval(updateStatus, 5000);
+    setInterval(loadJobs, 5000);
+  </script>
+  
+</body>
+</html>
